@@ -39,6 +39,37 @@ public class AvatarMouseTracking : MonoBehaviour
 
     Vrm10Instance vrm10;
     int currStateHash, nextStateHash;
+    //
+    [Header("Arms Tracking")]
+    public float armBlend = 1f;
+    public float armFadeSpeed = 5f;
+    public float armSmoothness = 5f;
+    //public float armMinPitch = -20f;
+    public float armMinPitch = 0f;
+    public float armMaxPitch = 40f;
+
+    private float armTrackingWeight;
+    private Quaternion upperArmRInitRot;
+    private Quaternion upperArmLInitRot;
+    private Transform upperArmR, upperArmL;
+    private Transform rightHand;
+    private Transform upperArmRDriver, upperArmLDriver;
+    private Transform rightUpperArmBone, leftUpperArmBone;
+    public float ikPositionWeight = 1f;     // how strongly IK moves the hand
+    public float ikRotationWeight = 1f;     // how strongly IK rotates the hand
+    public float ikSmoothing = 10f;         // smoothing for target moves
+    public float maxAimDistance = 30f;
+    public Transform muzzle;                // optional: if your gun prefab has a muzzle transform
+    public bool debugRays = true;
+
+    private Vector3 smoothedTarget;
+    private Vector3 armRestForward;
+
+    //
+    //[SerializeField] GameObject gunPrefab;
+    public GameObject gunPrefab;
+    bool wasArmed = false;
+    GameObject gun;
 
     void Start()
     {
@@ -46,7 +77,39 @@ public class AvatarMouseTracking : MonoBehaviour
         mainCam = Camera.main;
         if (!animator || !animator.isHuman) { enableMouseTracking = false; Debug.LogError("Animator not found or not humanoid!"); return; }
         vrm10 = GetComponentInChildren<Vrm10Instance>();
-        InitHead(); InitSpine(); InitEye();
+        InitHead(); InitSpine(); InitEye(); InitArms();
+        Debug.Log("guncheck");
+        //foreach (Component c in vrm10.GetComponentIndex(1)) {
+
+        Debug.Log($"Gun prefab is {(gunPrefab ? "SET" : "NULL")}");
+        //}
+        //var avatar = Instantiate(avatarPrefab);
+        var tracking = GetComponent<AvatarMouseTracking>();
+        tracking.gunPrefab = gunPrefab;
+        if (tracking != null)
+        {
+            Debug.Log("tracking");
+            if (tracking.gunPrefab != null)
+            {
+                Debug.Log("trackinggun");
+            }
+        }
+        //Component tracking = GetComponent<AvatarMouseTracking>();
+        //tracking.gunPrefab = gunPrefab;
+
+        if (gunPrefab)
+        {
+            Debug.Log("gun");
+            gun = Instantiate(gunPrefab, rightHand);
+            gun.transform.localPosition = Vector3.zero;
+            gun.transform.localRotation = Quaternion.identity;
+            //gun.SetActive(false); // invisible until armed
+            gun.SetActive(true); // invisible until armed
+        }
+        else
+        {
+            Debug.Log("no gun");
+        }
     }
 
     void InitHead()
@@ -71,6 +134,48 @@ public class AvatarMouseTracking : MonoBehaviour
         spineDriver.localPosition = spineBone.localPosition;
         spineDriver.localRotation = spineBone.localRotation;
         spineInitRot = spineBone.localRotation;
+    }
+    void InitArms()
+    {
+        // Right arm
+        upperArmR = animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
+        Transform lowerArmR = animator.GetBoneTransform(HumanBodyBones.RightLowerArm);
+        Transform handR = animator.GetBoneTransform(HumanBodyBones.RightHand);
+        //rightHand = animator.GetBoneTransform(HumanBodyBones.RightHand);
+
+        if (upperArmR)
+        {
+            Transform rightArmDriver = new GameObject("RightArmDriver").transform;
+            rightArmDriver.SetParent(upperArmR.parent, false);
+            rightArmDriver.localPosition = upperArmR.localPosition;
+            rightArmDriver.localRotation = upperArmR.localRotation;
+            upperArmRDriver = rightArmDriver; // store if you want to drive it later
+            upperArmRInitRot = upperArmR.localRotation;
+        }
+
+        // Left arm
+        upperArmL = animator.GetBoneTransform(HumanBodyBones.LeftUpperArm);
+        Transform lowerArmL = animator.GetBoneTransform(HumanBodyBones.LeftLowerArm);
+        Transform handL = animator.GetBoneTransform(HumanBodyBones.LeftHand);
+
+        if (upperArmL)
+        {
+            Transform leftArmDriver = new GameObject("LeftArmDriver").transform;
+            leftArmDriver.SetParent(upperArmL.parent, false);
+            leftArmDriver.localPosition = upperArmL.localPosition;
+            leftArmDriver.localRotation = upperArmL.localRotation;
+            upperArmLDriver = leftArmDriver;
+            upperArmLInitRot = upperArmL.localRotation;
+        }
+        //upperArmR = animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
+        //upperArmRDriver = new GameObject("UpperArmRDriver").transform;
+        //upperArmRDriver.SetParent(upperArmR.parent, false);
+        //upperArmRDriver.localPosition = upperArmR.localPosition;
+        //upperArmRDriver.localRotation = upperArmR.localRotation;
+        //upperArmRInitRot = upperArmR.localRotation;
+
+        //// Cache the arm's rest forward direction (in world space)
+        //armRestForward = upperArmR.TransformDirection(Vector3.back);
     }
 
     void InitEye()
@@ -112,6 +217,21 @@ public class AvatarMouseTracking : MonoBehaviour
     void LateUpdate()
     {
         if (!enableMouseTracking || !mainCam || !animator) return;
+        //
+        bool mouseUpper = Input.mousePosition.y > Screen.height / 3;
+        bool isArmed = animator.GetBool("isArmed");
+
+        if (mouseUpper && !isArmed)
+        {
+            animator.SetBool("isArmed", true);
+            //SetGunVisible(true);
+        }
+        else if (!mouseUpper && isArmed)
+        {
+            animator.SetBool("isArmed", false);
+            //SetGunVisible(false);
+        }
+        //
         var info = animator.GetCurrentAnimatorStateInfo(0);
         var next = animator.GetNextAnimatorStateInfo(0);
         bool trans = animator.IsInTransition(0);
@@ -121,6 +241,10 @@ public class AvatarMouseTracking : MonoBehaviour
         if (IsAllowed("Head")) DoHead();
         DoSpine();
         if (IsAllowed("Eye")) DoEye();
+        if (isArmed)
+        {
+            DoArms();
+        }
     }
 
     bool IsAllowed(string f)
@@ -171,7 +295,55 @@ public class AvatarMouseTracking : MonoBehaviour
         if (upperChestBone)
             upperChestBone.localRotation = Quaternion.Slerp(Quaternion.identity, delta, 0.6f * applied) * upperChestBone.localRotation;
     }
+    void DoArms()
+    {
+        float aimDistance = 10f;
+        float armYawLimit = 1f;
+        float armPitchLimit = 10f;
+        if (!upperArmR || !upperArmRDriver) return;
+        var mouse = Input.mousePosition;
+        Vector3 dirR = (mainCam.ScreenToWorldPoint(new Vector3(mouse.x, mouse.y, aimDistance)) - upperArmR.position).normalized;
+        Vector3 dirL = (mainCam.ScreenToWorldPoint(new Vector3(mouse.x, mouse.y, aimDistance)) - upperArmL.position).normalized;
+        Vector3 localDirR = upperArmR.parent.InverseTransformDirection(dirR);
+        Vector3 localDirL = upperArmL.parent.InverseTransformDirection(dirL);
+        float yawR = Mathf.Clamp(Mathf.Atan2(localDirR.x, localDirR.z) * Mathf.Rad2Deg, -armYawLimit, armPitchLimit);
+        float pitchR = Mathf.Clamp(-Mathf.Asin(localDirR.y) * Mathf.Rad2Deg, -armPitchLimit, armPitchLimit);
+        float yawL = Mathf.Clamp(Mathf.Atan2(localDirL.x, localDirL.z) * Mathf.Rad2Deg, -armYawLimit, armPitchLimit);
+        float pitchL = Mathf.Clamp(-Mathf.Asin(localDirL.y) * Mathf.Rad2Deg, -armPitchLimit, armPitchLimit);
+        Quaternion targetRotR = Quaternion.Euler(pitchR, yawR, 0);
+        Quaternion targetRotL = Quaternion.Euler(pitchR, yawR, 0);
+        upperArmRDriver.localRotation = Quaternion.Slerp(upperArmRDriver.localRotation, targetRotR, Time.deltaTime * armSmoothness);
+        upperArmLDriver.localRotation = Quaternion.Slerp(upperArmLDriver.localRotation, targetRotL, Time.deltaTime * armSmoothness);
+        Quaternion deltaR = upperArmRDriver.localRotation * Quaternion.Inverse(upperArmRInitRot);
+        upperArmR.localRotation = Quaternion.Slerp(upperArmR.localRotation, deltaR * upperArmR.localRotation, armBlend);
+        Quaternion deltaL = upperArmLDriver.localRotation * Quaternion.Inverse(upperArmLInitRot);
+        upperArmL.localRotation = Quaternion.Slerp(upperArmL.localRotation, deltaL * upperArmL.localRotation, armBlend);
+    }
+    void DoArms1()
+    {
+        float aimDistance = 10f;
+        float armYawLimit = 40f;
+        float armPitchLimit = 10f;
+        if (!upperArmR || !upperArmRDriver) return;
+        var mouse = Input.mousePosition;
+        Vector3 dirR = (mainCam.ScreenToWorldPoint(new Vector3(mouse.x, mouse.y, aimDistance)) - upperArmR.position).normalized;
+        Vector3 dirL = (mainCam.ScreenToWorldPoint(new Vector3(mouse.x, mouse.y, aimDistance)) - upperArmL.position).normalized;
+        Vector3 localDirR = upperArmR.parent.InverseTransformDirection(dirR);
+        Vector3 localDirL = upperArmL.parent.InverseTransformDirection(dirL);
+        float yawR = Mathf.Clamp(Mathf.Atan2(localDirR.x, localDirR.z) * Mathf.Rad2Deg, -armYawLimit, armYawLimit);
+        float yawL = Mathf.Clamp(Mathf.Atan2(-localDirL.x, localDirL.z) * Mathf.Rad2Deg, -armYawLimit, armYawLimit);
 
+        float pitchR = Mathf.Clamp(-Mathf.Asin(localDirR.y) * Mathf.Rad2Deg, -armPitchLimit, armPitchLimit);
+        float pitchL = Mathf.Clamp(-Mathf.Asin(localDirL.y) * Mathf.Rad2Deg, -armPitchLimit, armPitchLimit);
+        Quaternion targetRotR = Quaternion.Euler(pitchR, yawR, 0);
+        Quaternion targetRotL = Quaternion.Euler(pitchL, yawL, 0);
+        upperArmRDriver.localRotation = Quaternion.Slerp(upperArmRDriver.localRotation, targetRotR, Time.deltaTime * armSmoothness);
+        upperArmLDriver.localRotation = Quaternion.Slerp(upperArmLDriver.localRotation, targetRotL, Time.deltaTime * armSmoothness);
+        Quaternion deltaR = upperArmRDriver.localRotation * Quaternion.Inverse(upperArmRInitRot);
+        upperArmR.localRotation = Quaternion.Slerp(upperArmR.localRotation, deltaR * upperArmR.localRotation, armBlend);
+        Quaternion deltaL = upperArmLDriver.localRotation * Quaternion.Inverse(upperArmLInitRot);
+        upperArmL.localRotation = Quaternion.Slerp(upperArmL.localRotation, deltaL * upperArmL.localRotation, armBlend);
+    }
     void DoEye()
     {
         var mouse = Input.mousePosition;
@@ -211,5 +383,10 @@ public class AvatarMouseTracking : MonoBehaviour
         Destroy(rightEyeDriver?.gameObject);
         Destroy(eyeCenter?.gameObject);
         Destroy(vrmLookAtTarget?.gameObject);
+        //
+        Destroy(upperArmRDriver?.gameObject);
+        Destroy(upperArmLDriver?.gameObject);
+        Destroy(rightUpperArmBone?.gameObject);
+        Destroy(leftUpperArmBone?.gameObject);
     }
 }
