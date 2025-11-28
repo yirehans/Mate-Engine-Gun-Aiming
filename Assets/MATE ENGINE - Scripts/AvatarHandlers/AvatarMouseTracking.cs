@@ -41,6 +41,7 @@ public class AvatarMouseTracking : MonoBehaviour
     int currStateHash, nextStateHash;
     //
     [Header("Arms Tracking")]
+    public float yAimTreshold = 500f;
     public float armBlend = 1f;
     public float armFadeSpeed = 5f;
     public float armSmoothness = 5f;
@@ -77,7 +78,10 @@ public class AvatarMouseTracking : MonoBehaviour
         mainCam = Camera.main;
         if (!animator || !animator.isHuman) { enableMouseTracking = false; Debug.LogError("Animator not found or not humanoid!"); return; }
         vrm10 = GetComponentInChildren<Vrm10Instance>();
-        InitHead(); InitSpine(); InitEye(); InitArms();
+        InitHead(); InitSpine(); InitEye();
+        //
+        yAimTreshold = Screen.height * 0.6f;
+        InitArms();
         Debug.Log("guncheck");
         //foreach (Component c in vrm10.GetComponentIndex(1)) {
 
@@ -218,7 +222,7 @@ public class AvatarMouseTracking : MonoBehaviour
     {
         if (!enableMouseTracking || !mainCam || !animator) return;
         //
-        bool mouseUpper = Input.mousePosition.y > Screen.height / 3;
+        bool mouseUpper = Input.mousePosition.y > yAimTreshold;
         bool isArmed = animator.GetBool("isArmed");
 
         if (mouseUpper && !isArmed)
