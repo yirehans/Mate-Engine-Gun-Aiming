@@ -71,6 +71,10 @@ public class AvatarMouseTracking : MonoBehaviour
     public GameObject gunPrefab;
     bool wasArmed = false;
     GameObject gun;
+    [Header("Gun Attachment Offset")]
+    public Vector3 gunLocalPos = Vector3.zero;
+    public Vector3 gunLocalRot = Vector3.zero;
+
 
     void Start()
     {
@@ -80,7 +84,9 @@ public class AvatarMouseTracking : MonoBehaviour
         vrm10 = GetComponentInChildren<Vrm10Instance>();
         InitHead(); InitSpine(); InitEye();
         //
-        yAimTreshold = Screen.height * 0.6f;
+        //yAimTreshold = Screen.height * 0.5f;
+        //yAimTreshold = Screen.height * 0.6f;
+        yAimTreshold = Screen.height * 0.7f;
         InitArms();
         Debug.Log("guncheck");
         //foreach (Component c in vrm10.GetComponentIndex(1)) {
@@ -103,12 +109,20 @@ public class AvatarMouseTracking : MonoBehaviour
 
         if (gunPrefab)
         {
-            Debug.Log("gun");
+            Debug.Log("Prefab is: " + gunPrefab, this);
             gun = Instantiate(gunPrefab, rightHand);
-            gun.transform.localPosition = Vector3.zero;
-            gun.transform.localRotation = Quaternion.identity;
-            //gun.SetActive(false); // invisible until armed
-            gun.SetActive(true); // invisible until armed
+            
+            //gunLocalPos = new Vector3(0.02f, -0.03f, 0.05f);
+            gunLocalPos = new Vector3(0.05f, -0.01f, -0.02f);
+            //gunLocalRot = new Vector3(0, 90, 90);
+            gunLocalRot = new Vector3(15, 90, 90);
+
+            gun.transform.localScale = Vector3.one * 0.9f;
+            gun.transform.localPosition = gunLocalPos;
+            gun.transform.localRotation = Quaternion.Euler(gunLocalRot);
+            Debug.Log("Gun pos: " + gun.transform.position);
+            //gun.SetActive(true);
+            gun.SetActive(false);
         }
         else
         {
@@ -145,7 +159,7 @@ public class AvatarMouseTracking : MonoBehaviour
         upperArmR = animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
         Transform lowerArmR = animator.GetBoneTransform(HumanBodyBones.RightLowerArm);
         Transform handR = animator.GetBoneTransform(HumanBodyBones.RightHand);
-        //rightHand = animator.GetBoneTransform(HumanBodyBones.RightHand);
+        rightHand = animator.GetBoneTransform(HumanBodyBones.RightHand);
 
         if (upperArmR)
         {
@@ -223,17 +237,31 @@ public class AvatarMouseTracking : MonoBehaviour
         if (!enableMouseTracking || !mainCam || !animator) return;
         //
         bool mouseUpper = Input.mousePosition.y > yAimTreshold;
+        //bool mouseUpper = mainCam.ScreenToViewportPoint(Input.mousePosition).y > 0.5f;
+        Vector2 mouse = Input.mousePosition;          // screen pixels, origin bottom-left
+        //Rect camRect = mainCam.pixelRect;
+        //float viewportY = (mouse.y - camRect.y) / camRect.height;
+
+        ////// optional clamp and debug
+        ////viewportY = Mathf.Clamp01(viewportY);
+        //[DllImport("user32.dll")]
+        //static extern IntPtr GetActiveWindow();
+        //float mouseYinWindow = mouse.y - GetActiveWindow().m;
+
+        //// Now compute upper/lower half
+        //bool mouseUpper = mouseYinWindow > (win.height * 0.5f);
+        //bool mouseUpper = viewportY > yAimTreshold;
         bool isArmed = animator.GetBool("isArmed");
 
         if (mouseUpper && !isArmed)
         {
             animator.SetBool("isArmed", true);
-            //SetGunVisible(true);
+            gun.SetActive(true);
         }
         else if (!mouseUpper && isArmed)
         {
             animator.SetBool("isArmed", false);
-            //SetGunVisible(false);
+            gun.SetActive(false);
         }
         //
         var info = animator.GetCurrentAnimatorStateInfo(0);

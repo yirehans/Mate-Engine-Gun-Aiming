@@ -1,7 +1,14 @@
 fileFormatVersion: 2
 guid: 9fda9a6e35c722641937ec5a13511708
+AssetOrigin:
+  serializedVersion: 1
+  productId: 145087
+  packageName: Frank RPG Gunslinger
+  packageVersion: 1.0
+  assetPath: Assets/Frank_RPG_Gunslinger/Assets/Animations/FBX/Frank_RPG_Gunslinger_Handgun_Fire.FBX
+  uploadId: 501695
 ModelImporter:
-  serializedVersion: 21202
+  serializedVersion: 24200
   internalIDToNameTable:
   - first:
       1: 100000
@@ -556,14 +563,6 @@ ModelImporter:
     optimizeGameObjects: 0
     removeConstantScaleCurves: 0
     motionNodeName: root
-    rigImportErrors: 
-    rigImportWarnings: "Copied Avatar Rig Configuration mis-match. Bone length in
-      copied configuration does not match position in animation file:\n\t'thigh_l'
-      : position error = 1.215424 mm\n\t'thigh_r' : position error = 2.726579 mm\n\t'upperarm_l'
-      : position error = 1.183165 mm\n\t'hand_l' : position error = 6.568058 mm\n\t'ring_02_l'
-      : position error = 1.044183 mm\n\t'upperarm_r' : position error = 1.642103
-      mm\n\t'hand_r' : position error = 3.880156 mm\n\t'middle_02_r' : position error
-      = 1.204084 mm\n\t'ring_02_r' : position error = 1.314682 mm\n"
     animationImportErrors: 
     animationImportWarnings: "\nClip 'Take 001' has import animation warnings that
       might lower retargeting quality:\nNote: Activate translation DOF on avatar
@@ -823,6 +822,7 @@ ModelImporter:
     addColliders: 0
     useSRGBMaterialColor: 1
     sortHierarchyByName: 1
+    importPhysicalCameras: 1
     importVisibility: 1
     importBlendShapes: 1
     importCameras: 1
@@ -840,6 +840,9 @@ ModelImporter:
     maxBonesPerVertex: 4
     minBoneWeight: 0.001
     optimizeBones: 1
+    generateMeshLods: 0
+    meshLodGenerationFlags: 0
+    maximumMeshLod: -1
     meshOptimizationFlags: -1
     indexFormat: 0
     secondaryUVAngleDistortion: 8
@@ -850,6 +853,7 @@ ModelImporter:
     secondaryUVMinObjectScale: 1
     secondaryUVPackMargin: 4
     useFileScale: 1
+    strictVertexDataChecks: 0
   tangentSpace:
     normalSmoothAngle: 60
     normalImportMode: 0
@@ -1358,8 +1362,7 @@ ModelImporter:
     - name: ik_hand_r
       parentName: ik_hand_gun
       position: {x: -0, y: 0, z: -0.000000019073486}
-      rotation: {x: 0.000000014901159, y: -0.000000022351744, z: 0.000000014901163,
-        w: 1}
+      rotation: {x: 0.000000014901159, y: -0.000000022351744, z: 0.000000014901163, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: M82_Root
       parentName: ik_hand_r
@@ -1464,8 +1467,7 @@ ModelImporter:
     - name: lowerarm_twist_01_l
       parentName: lowerarm_l
       position: {x: -0.14000021, y: 0.000000019073486, z: 0.00000015258789}
-      rotation: {x: 0.000000014901161, y: -0.000000014901161, z: 0.000000014901161,
-        w: 1}
+      rotation: {x: 0.000000014901161, y: -0.000000014901161, z: 0.000000014901161, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: hand_l
       parentName: lowerarm_l
@@ -1745,8 +1747,7 @@ ModelImporter:
     - name: FX_Gunshot_Light
       parentName: FX_Gunfire_Bone
       position: {x: 0.12306832, y: 0.00000008106232, z: 0.00000030457971}
-      rotation: {x: -0.0000000037252903, y: 3.4924638e-10, z: 0.0000000033020204,
-        w: 1}
+      rotation: {x: -0.0000000037252903, y: 3.4924638e-10, z: 0.0000000033020204, w: 1}
       scale: {x: 1, y: 1, z: 1}
     - name: ShotGun
       parentName: Frank_Gunslinger_Skin(Clone)
@@ -1775,21 +1776,15 @@ ModelImporter:
     hasTranslationDoF: 0
     hasExtraRoot: 1
     skeletonHasParents: 1
-  lastHumanDescriptionAvatarSource: {fileID: 9000000, guid: 4c89d8affd612674b9c238ff8651667e,
-    type: 3}
+  lastHumanDescriptionAvatarSource: {fileID: 9000000, guid: 4c89d8affd612674b9c238ff8651667e, type: 3}
   autoGenerateAvatarMappingIfUnspecified: 1
   animationType: 3
   humanoidOversampling: 1
   avatarSetup: 2
   addHumanoidExtraRootOnlyWhenUsingAvatar: 0
+  importBlendShapeDeformPercent: 0
+  remapMaterialsIfMaterialImportModeIsNone: 1
   additionalBone: 0
   userData: 
   assetBundleName: 
   assetBundleVariant: 
-AssetOrigin:
-  serializedVersion: 1
-  productId: 145087
-  packageName: Frank RPG Gunslinger
-  packageVersion: 1.0
-  assetPath: Assets/Frank_RPG_Gunslinger/Assets/Animations/FBX/Frank_RPG_Gunslinger_Handgun_Fire.FBX
-  uploadId: 501695

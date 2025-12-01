@@ -3,8 +3,12 @@
   "WorkspaceRootPath": "C:\\Users\\yireh\\Downloads\\Mate-Engine-main\\Mate-Engine\\",
   "Documents": [
     {
-      "AbsoluteMoniker": "D:0:0:{C73E9B1A-BF42-9E6B-C958-6D6CBB9AE909}|Assembly-CSharp.csproj|c:\\users\\yireh\\downloads\\mate-engine-main\\mate-engine\\assets\\mate engine - scripts\\avatarhandlers\\avatarmousetracking.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "AbsoluteMoniker": "D:0:0:{C73E9B1A-BF42-9E6B-C958-6D6CBB9AE909}|Assembly-CSharp.csproj|C:\\Users\\yireh\\Downloads\\Mate-Engine-main\\Mate-Engine\\assets\\mate engine - scripts\\avatarhandlers\\avatarmousetracking.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
       "RelativeMoniker": "D:0:0:{C73E9B1A-BF42-9E6B-C958-6D6CBB9AE909}|Assembly-CSharp.csproj|solutionrelative:assets\\mate engine - scripts\\avatarhandlers\\avatarmousetracking.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
+    },
+    {
+      "AbsoluteMoniker": "D:0:0:{C8A152FD-C40D-0A1A-A49B-74E031FCE26A}|Kirurobo.UniWindowController.csproj|c:\\users\\yireh\\downloads\\mate-engine-main\\mate-engine\\assets\\mate engine - packages\\kirurobo\\uniwindowcontroller\\runtime\\scripts\\uniwindowcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}",
+      "RelativeMoniker": "D:0:0:{C8A152FD-C40D-0A1A-A49B-74E031FCE26A}|Kirurobo.UniWindowController.csproj|solutionrelative:assets\\mate engine - packages\\kirurobo\\uniwindowcontroller\\runtime\\scripts\\uniwindowcontroller.cs||{A6C744A8-0E4A-4FC6-886A-064283054674}"
     }
   ],
   "DocumentGroupContainers": [
@@ -14,11 +18,24 @@
       "DocumentGroups": [
         {
           "DockedWidth": 200,
-          "SelectedChildIndex": 1,
+          "SelectedChildIndex": 2,
           "Children": [
             {
               "$type": "Bookmark",
               "Name": "ST:0:0:{cce594b6-0c39-4442-ba28-10c64ac7e89f}"
+            },
+            {
+              "$type": "Document",
+              "DocumentIndex": 1,
+              "Title": "UniWindowController.cs",
+              "DocumentMoniker": "C:\\Users\\yireh\\Downloads\\Mate-Engine-main\\Mate-Engine\\Assets\\MATE ENGINE - Packages\\Kirurobo\\UniWindowController\\Runtime\\Scripts\\UniWindowController.cs",
+              "RelativeDocumentMoniker": "Assets\\MATE ENGINE - Packages\\Kirurobo\\UniWindowController\\Runtime\\Scripts\\UniWindowController.cs",
+              "ToolTip": "C:\\Users\\yireh\\Downloads\\Mate-Engine-main\\Mate-Engine\\Assets\\MATE ENGINE - Packages\\Kirurobo\\UniWindowController\\Runtime\\Scripts\\UniWindowController.cs",
+              "RelativeToolTip": "Assets\\MATE ENGINE - Packages\\Kirurobo\\UniWindowController\\Runtime\\Scripts\\UniWindowController.cs",
+              "ViewState": "AgIAABUAAAAAAAAAAAAAAA8AAAAZAAAAAAAAAA==",
+              "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
+              "WhenOpened": "2025-11-30T09:48:11.72Z",
+              "EditorCaption": ""
             },
             {
               "$type": "Document",
@@ -28,7 +45,7 @@
               "RelativeDocumentMoniker": "Assets\\MATE ENGINE - Scripts\\AvatarHandlers\\AvatarMouseTracking.cs",
               "ToolTip": "C:\\Users\\yireh\\Downloads\\Mate-Engine-main\\Mate-Engine\\Assets\\MATE ENGINE - Scripts\\AvatarHandlers\\AvatarMouseTracking.cs",
               "RelativeToolTip": "Assets\\MATE ENGINE - Scripts\\AvatarHandlers\\AvatarMouseTracking.cs",
-              "ViewState": "AgIAACUBAAAAAAAAAAAgwCkBAAAPAAAAAAAAAA==",
+              "ViewState": "AgIAAEgBAAAAAAAAAAAcwF0AAAALAAAAAAAAAA==",
               "Icon": "ae27a6b0-e345-4288-96df-5eaf394ee369.000738|",
               "WhenOpened": "2025-11-25T14:24:37.664Z",
               "EditorCaption": ""
