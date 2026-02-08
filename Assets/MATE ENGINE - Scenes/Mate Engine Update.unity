@@ -33240,7 +33240,7 @@ Light:
   serializedVersion: 11
   m_Type: 2
   m_Color: {r: 1, g: 0.26999998, b: 0.96203995, a: 1}
-  m_Intensity: 1.223923e-30
+  m_Intensity: 4.856194e-31
   m_Range: 0.5
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -75623,7 +75623,7 @@ Light:
   serializedVersion: 11
   m_Type: 2
   m_Color: {r: 0, g: 0.44799995, b: 1, a: 1}
-  m_Intensity: 2.447846e-30
+  m_Intensity: 9.712388e-31
   m_Range: 1
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -99576,7 +99576,7 @@ Light:
   serializedVersion: 11
   m_Type: 2
   m_Color: {r: 0, g: 0.44799995, b: 1, a: 1}
-  m_Intensity: 1.8358844e-30
+  m_Intensity: 7.2842907e-31
   m_Range: 1
   m_SpotAngle: 30
   m_InnerSpotAngle: 21.80208
@@ -255650,7 +255650,9 @@ MonoBehaviour:
   maxAimDistance: 30
   muzzle: {fileID: 0}
   debugRays: 1
-  gunPrefab: {fileID: 2867417286392604782, guid: 37e98970f8baf7647b735d9036006f0d, type: 3}
+  gunPrefabs:
+  - {fileID: 2867417286392604782, guid: 7e849460de78cda4296deb2a634eb52a, type: 3}
+  - {fileID: 2867417286392604782, guid: 37e98970f8baf7647b735d9036006f0d, type: 3}
   gunLocalPos: {x: 0, y: 0, z: 0}
   gunLocalRot: {x: 0, y: 0, z: 0}
 --- !u!224 &7210972155341528753
@@ -256061,7 +256063,7 @@ MonoBehaviour:
     groupID: ambi_lights
     exclusiveTags:
     - lights
-    fadeCurrentValue: 6.119615e-31
+    fadeCurrentValue: 2.428097e-31
     fadeTarget: 0
     isFading: 1
     hasYSet: 0
@@ -256085,7 +256087,7 @@ MonoBehaviour:
     groupID: ambi_lights
     exclusiveTags:
     - lights
-    fadeCurrentValue: 6.119615e-31
+    fadeCurrentValue: 2.428097e-31
     fadeTarget: 0
     isFading: 1
     hasYSet: 0
@@ -256109,7 +256111,7 @@ MonoBehaviour:
     groupID: ambi_lights
     exclusiveTags:
     - lights
-    fadeCurrentValue: 6.119615e-31
+    fadeCurrentValue: 2.428097e-31
     fadeTarget: 0
     isFading: 1
     hasYSet: 0
@@ -270909,6 +270911,7 @@ MonoBehaviour:
   smoothingMaxSpeed: 6000
   keepTopmostWhileSnapped: 1
   unsnapGraceTime: 0.12
+  snappedSide: 0
 --- !u!4 &8517994874832359280
 Transform:
   m_ObjectHideFlags: 0
@@ -284179,7 +284182,9 @@ MonoBehaviour:
   maxAimDistance: 30
   muzzle: {fileID: 0}
   debugRays: 1
-  gunPrefab: {fileID: 2867417286392604782, guid: 37e98970f8baf7647b735d9036006f0d, type: 3}
+  gunPrefabs:
+  - {fileID: 2867417286392604782, guid: 7e849460de78cda4296deb2a634eb52a, type: 3}
+  - {fileID: 2867417286392604782, guid: 37e98970f8baf7647b735d9036006f0d, type: 3}
   gunLocalPos: {x: 0, y: 0, z: 0}
   gunLocalRot: {x: 0, y: 0, z: 0}
 --- !u!114 &8924917334924735500
@@ -285107,6 +285112,7 @@ MonoBehaviour:
   smoothingMaxSpeed: 6000
   keepTopmostWhileSnapped: 1
   unsnapGraceTime: 0.12
+  snappedSide: 0
 --- !u!4 &8932384755772289895
 Transform:
   m_ObjectHideFlags: 0

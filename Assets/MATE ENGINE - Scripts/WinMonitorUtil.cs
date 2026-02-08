@@ -27,10 +27,10 @@ public static class WinMonitorUtil
     // -----------------------------
 
     [DllImport("user32.dll")]
-    static extern IntPtr GetActiveWindow();
+    public static extern IntPtr GetActiveWindow();
 
     [DllImport("user32.dll")]
-    static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
+    public static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
     [DllImport("user32.dll")]
     static extern IntPtr MonitorFromWindow(IntPtr hwnd, uint dwFlags);

@@ -36,11 +36,11 @@ public class SimpleShoot : MonoBehaviour
         //if (Input.GetButtonDown("Fire1"))
         //if (Input.GetMouseButtonUp(0))
         //if (GlobalMouseButtons.LeftMouseUp())
-        if (GlobalMouse.LeftMouseUp())
-        {
-            //Calls animation on the gun that has the relevant animation events that will fire
-            gunAnimator.SetTrigger("Fire");
-        }
+        //if (GlobalMouse.LeftMouseUp())
+        //{
+        //    //Calls animation on the gun that has the relevant animation events that will fire
+        //    gunAnimator.SetTrigger("Fire");
+        //}
     }
 
 

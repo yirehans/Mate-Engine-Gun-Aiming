@@ -1,4 +1,5 @@
-﻿using System;
+﻿using Microsoft.VisualBasic.Devices;
+using System;
 using System.Collections.Generic;
 using Unity.VisualScripting.Antlr3.Runtime;
 using UnityEngine;
@@ -34,6 +35,7 @@ public class AvatarMouseTracking : MonoBehaviour
     Transform headBone, spineBone, chestBone, upperChestBone;
     Transform leftEyeBone, rightEyeBone, headDriver, spineDriver;
     Transform leftEyeDriver, rightEyeDriver, eyeCenter, vrmLookAtTarget;
+    Transform body;
 
     Quaternion headInitRot, spineInitRot;
     float spineTrackingWeight;
@@ -66,15 +68,48 @@ public class AvatarMouseTracking : MonoBehaviour
 
     //
     //[SerializeField] GameObject gunPrefab;
-    public GameObject gunPrefab;
+    //public GameObject gunPrefab;
+    //public GameObject gunPrefab2;
+    GameObject currentGunObj;
+    int currentGunInd;
+    public List<GameObject> gunPrefabs;
     bool wasArmed = false;
     GameObject gun;
     [Header("Gun Attachment Offset")]
     public Vector3 gunLocalPos = Vector3.zero;
     public Vector3 gunLocalRot = Vector3.zero;
+    float monitorHeight;
+    float monitorWidth;
     float lastMonitorHeight;
+    float lastMonitorWidth;
+    bool bodyFire = false;
+    bool faceBackward = false;
+    bool FPSallow0 = true;
+    bool FPSallow = false;
+    bool FPSmode = false;
+    //bool currentYaw = 0;
+    bool turnViaRight = false;
+    float currentYaw;
+    float yawVelocity;
 
-
+    float turnTargetYaw;     // ← LOCKED target
+    bool isTurning;
+    bool prevFPSMode = false;
+    bool prevturnViaRight = false;
+    float turnSmoothTime = 0.06f;
+    WinMonitorUtil.RECT monitor;
+    WinMonitorUtil.RECT winRect;
+    Vector2 virtualMouseOriginal = Vector2.zero;
+    Vector2 virtualMouseClamp = Vector2.zero;
+    Vector2 virtualMouseModified = Vector2.zero;
+    Vector2 virtualMouseModifiedClamp = Vector2.zero;
+    string prevState = "";
+    bool waitingTransitionState = false;
+    float FPSaimSizeHalfen = 0.05f;
+    float FPSpercentageMin = 0.45f;
+    float FPSpercentageMax = 0.55f;
+    float yawROffset = 0f;
+    float yawLOffset = 0f;
     void Start()
     {
         animator = GetComponent<Animator>();
@@ -89,46 +124,53 @@ public class AvatarMouseTracking : MonoBehaviour
         //yAimTreshold = Screen.height * 0.65f;
         yAimTreshold = Display.main.systemHeight * 0.65f;
         InitArms();
+        body = animator.transform;
+        currentYaw = transform.eulerAngles.y;
         Debug.Log("guncheck");
         //foreach (Component c in vrm10.GetComponentIndex(1)) {
-
-        Debug.Log($"Gun prefab is {(gunPrefab ? "SET" : "NULL")}");
-        //}
-        //var avatar = Instantiate(avatarPrefab);
-        var tracking = GetComponent<AvatarMouseTracking>();
-        tracking.gunPrefab = gunPrefab;
-        if (tracking != null)
-        {
-            Debug.Log("tracking");
-            if (tracking.gunPrefab != null)
-            {
-                Debug.Log("trackinggun");
-            }
-        }
+        currentGunInd = 1;
         //Component tracking = GetComponent<AvatarMouseTracking>();
         //tracking.gunPrefab = gunPrefab;
 
-        if (gunPrefab)
-        {
-            Debug.Log("Prefab is: " + gunPrefab, this);
-            gun = Instantiate(gunPrefab, rightHand);
-            
-            //gunLocalPos = new Vector3(0.02f, -0.03f, 0.05f);
-            gunLocalPos = new Vector3(0.05f, -0.01f, -0.02f);
-            //gunLocalRot = new Vector3(0, 90, 90);
-            gunLocalRot = new Vector3(15, 90, 90);
+        //if (gunPrefab)
+        //{
+        //    LoadGun(gunPrefab);
+        //    gun.SetActive(false);
+        //}
+        //else
+        //{
+        //    Debug.Log("no gun");
+        //}
+        LoadGun(gunPrefabs[currentGunInd]);
+        gun.SetActive(false);
+        //for (int i = 0; i < animator.layerCount; i++) 
+        //{
+        //    Debug.Log(animator.GetLayerName(i));
+        //}
+    }
 
-            gun.transform.localScale = Vector3.one * 0.9f;
-            gun.transform.localPosition = gunLocalPos;
-            gun.transform.localRotation = Quaternion.Euler(gunLocalRot);
-            Debug.Log("Gun pos: " + gun.transform.position);
-            //gun.SetActive(true);
-            gun.SetActive(false);
-        }
-        else
-        {
-            Debug.Log("no gun");
-        }
+    void LoadGun(int gunIndex)
+    {
+        LoadGun(gunPrefabs[gunIndex]);
+    }
+    void LoadGun(GameObject prefab)
+    {
+        Destroy(gun?.gameObject);
+        Debug.Log("Prefab is: " + prefab, this);
+        gun = Instantiate(prefab, rightHand);
+
+        //gunLocalPos = new Vector3(0.02f, -0.03f, 0.05f);
+        gunLocalPos = new Vector3(0.05f, -0.01f, -0.02f);
+        //gunLocalRot = new Vector3(0, 90, 90);
+        gunLocalRot = new Vector3(15, 90, 90);
+
+        gun.transform.localScale = Vector3.one * 0.9f;
+        gun.transform.localPosition = gunLocalPos;
+        gun.transform.localRotation = Quaternion.Euler(gunLocalRot);
+        Debug.Log("Gun pos: " + gun.transform.position);
+        //gun.SetActive(true);
+        //gun.SetActive(false);
+        currentGunObj = prefab;
     }
 
     void InitHead()
@@ -200,10 +242,13 @@ public class AvatarMouseTracking : MonoBehaviour
             rightArmDriver.SetParent(upperArmR.parent, false);
             rightArmDriver.localPosition = upperArmR.localPosition;
             rightArmDriver.localRotation = upperArmR.localRotation;
-            //upperArmRDriver = rightArmDriver; // store if you want to drive it later
+            upperArmRDriver = rightArmDriver; // store if you want to drive it later
             //Debug.Log($"upperArmR.localRotation: {upperArmR.localRotation.x}; {upperArmR.localRotation.y}; {upperArmR.localRotation.z}; {upperArmR.localRotation.w}");
             //upperArmRInitRot = upperArmR.localRotation * calibrateOffsetR;
             //Debug.Log($"aftercali: {upperArmRInitRot.x}; {upperArmRInitRot.y}; {upperArmRInitRot.z}; {upperArmRInitRot.w}");
+            //Debug.Log("upperArmR.ToString()");
+            //Debug.Log($"{upperArmR.rotation.x} {upperArmR.rotation.y} {upperArmR.rotation.z} {upperArmR.rotation.w}");
+            //Debug.Log(upperArmR.localRotation.ToString());
             upperArmRInitRot = new Quaternion(0, 0, 0, 1);
         }
         //calibrateOffsetR = ComputeCalibration(upperArmRInitRot);
@@ -225,8 +270,23 @@ public class AvatarMouseTracking : MonoBehaviour
             upperArmLDriver = leftArmDriver;
             //upperArmLInitRot = upperArmL.localRotation;
             //Debug.Log($"upperArmL.localRotation: {upperArmL.localRotation.x}; {upperArmL.localRotation.y}; {upperArmL.localRotation.z}; {upperArmL.localRotation.w}");
+            //Debug.Log("upperArmL.ToString()");
+            //Debug.Log($"{upperArmL.rotation.x} {upperArmL.rotation.y} {upperArmL.rotation.z} {upperArmL.rotation.w}");
+            //Debug.Log(upperArmL.localRotation.ToString());
+            //upperArmL.rotation = new Quaternion(- upperArmR.rotation.x, upperArmR.rotation.y, upperArmR.rotation.z, upperArmR.rotation.w);
+            //upperArmL.localRotation = new Quaternion(upperArmR.localRotation.x, upperArmR.localRotation.y, upperArmR.localRotation.z, upperArmR.localRotation.w);
             upperArmLInitRot = new Quaternion(0, 0, 0, 1);
         }
+        float rightArmInitYaw = upperArmR.localRotation.eulerAngles.y;
+        float leftArmInitYaw = upperArmL.localRotation.eulerAngles.y;
+
+        // Convert to [-180, 180] range
+        if (rightArmInitYaw > 180f) rightArmInitYaw -= 360f;
+        if (leftArmInitYaw > 180f) leftArmInitYaw -= 360f;
+        yawROffset = -rightArmInitYaw;  // +4.7f for your rig
+        yawLOffset = -leftArmInitYaw;   // -2.2f for your rig
+        Debug.Log("Right Arm Init Yaw: " + upperArmR.localRotation.eulerAngles.y);
+        Debug.Log("Left Arm Init Yaw: " + upperArmL.localRotation.eulerAngles.y);
         //upperArmR = animator.GetBoneTransform(HumanBodyBones.RightUpperArm);
         //upperArmRDriver = new GameObject("UpperArmRDriver").transform;
         //upperArmRDriver.SetParent(upperArmR.parent, false);
@@ -289,72 +349,181 @@ public class AvatarMouseTracking : MonoBehaviour
         }
     }
 
-    void LateUpdate()
+    void SetMonitor()
     {
-        if (!enableMouseTracking || !mainCam || !animator) return;
-        //
-        float monitorHeight = 0;
-        if (WinMonitorUtil.TryGetCurrentMonitor(out var m))
-        {
 
-            // 3️⃣ Compute monitor size
-            //float monitorWidth = m.right - m.left;
-            monitorHeight = m.bottom - m.top;
+    }
+
+    void SetVirtualMouse()
+    {
+        //if (WinMonitorUtil.TryGetCurrentMonitor(out monitor))
+        if (WinMonitorUtil.TryGetCurrentMonitor(out var monitor1))
+        {
             lastMonitorHeight = monitorHeight;
-            //if (monitorHeight <= 0)
-            //{
-            //    monitorHeight = lastMonitorHeight;
-            //    //Debug.Log($"{mouse0.x} {mouse0.y}, {monitorHeight}");
-            //    Debug.Log($"{monitorHeight}");
-            //}
-            //else
-            //{
-            //    lastMonitorHeight = monitorHeight;
-            //}
+            lastMonitorWidth = monitorWidth;
+            monitor = monitor1;
+            monitorHeight = Math.Abs(monitor.bottom - monitor.top);
+            monitorWidth = Math.Abs(monitor.right - monitor.left);
         }
         else
         {
-            //Debug.Log($"failed getting monitor");
-            //return;
             monitorHeight = lastMonitorHeight;
-            //Debug.Log($"{mouse0.x} {mouse0.y}, {monitorHeight}");
-            //Debug.Log($"{monitorHeight}");
+            monitorWidth = lastMonitorWidth;
         }
-
-        // 2️⃣ Get global mouse position
+        //Vector2 m = Input.mousePosition;
         Vector2 mouse0 = GlobalMouse.GetPosition();
+        mouse0.y = monitorHeight - mouse0.y;
+        virtualMouseOriginal = mouse0;
+        virtualMouseModified = mouse0;
 
         // 4️⃣ Normalize mouse Y within this monitor
-        float mouseY01 = (mouse0.y - m.top) / monitorHeight;
+        float mouseY01 = (mouse0.y - monitor.top) / monitorHeight;
+        float mouseX01 = (mouse0.x - monitor.right) / monitorWidth;
         //Debug.Log($"{mouse0.x} {mouse0.y}, {monitorHeight}");
 
         // Windows Y → Unity-style Y
         mouseY01 = 1f - mouseY01;
+        mouseX01 = 1f - mouseX01;
 
         // (optional safety)
         mouseY01 = Mathf.Clamp01(mouseY01);
+        mouseX01 = Mathf.Clamp01(mouseX01);
+        virtualMouseClamp = new Vector2(mouseX01, mouseY01);
+        //virtualMouseOriginalRatio = new Vector2(mouseX01, mouseY01);
+        // future mods go here
+        // e.g. arrow keys, recoil offset
+
+        //return mouse;
+        
+    }
+
+    void ModifyVirtualMouse()
+    {
+        virtualMouseModified = virtualMouseOriginal;
+        WinMonitorUtil.GetWindowRect(WinMonitorUtil.GetActiveWindow(), out winRect);
+        Vector2 winSize = new Vector2(Math.Abs(winRect.left - winRect.right), Math.Abs(winRect.bottom - winRect.top));
+        Vector2 winMiddle = new Vector2((winRect.left + winRect.right) / 2, (winRect.bottom + winRect.top) / 2);
+        if (FPSmode)
+        {
+            virtualMouseModified.x = monitorWidth - virtualMouseOriginal.x;
+        }
+        if (winRect.left < virtualMouseModified.x && virtualMouseModified.x < winRect.right && winRect.top < virtualMouseModified.y && virtualMouseModified.y < winRect.bottom)
+        {
+            virtualMouseModifiedClamp = new Vector2(virtualMouseModified.x - winRect.left, virtualMouseModified.y - winRect.top);
+        }
+        else
+        {
+            float winSizeCot = winSize.x / winSize.y;
+            float globalDistanceCot = (virtualMouseModified.x - winMiddle.x) / (virtualMouseModified.y - winMiddle.y);
+            if (Math.Abs(globalDistanceCot) > winSizeCot)
+            {
+                int clampX = virtualMouseModified.x > winMiddle.x ? winRect.right : winRect.left;
+                int clampY = (int)(clampX / globalDistanceCot);
+                virtualMouseModifiedClamp = new Vector2(clampX, clampY);
+            }
+            else
+            {
+                int clampY = virtualMouseModified.y > winMiddle.y ? winRect.bottom : winRect.top;
+                int clampX = (int)(clampY * globalDistanceCot);
+                virtualMouseModifiedClamp = new Vector2(clampX, clampY);
+            }
+        }
+    }
+    void LateUpdate()
+    {
+        if (!enableMouseTracking || !mainCam || !animator) return;
+        //
+        SetVirtualMouse();
+        //turnViaRight = isTurning ? turnViaRight : mouseX01 >= 0.5f;
         //
         //bool mouseUpper = Input.mousePosition.y > yAimTreshold;
         //bool mouseUpper = Input.mousePosition.y > yAimTreshold;
-        bool mouseUpper = mouseY01 >= 0.49f;
-        //bool mouseUpper = mainCam.ScreenToViewportPoint(Input.mousePosition).y > 0.5f;
-        Vector2 mouse = Input.mousePosition;          // screen pixels, origin bottom-left
-        //Rect camRect = mainCam.pixelRect;
-        //float viewportY = (mouse.y - camRect.y) / camRect.height;
+        //bool mouseUpper = mouseY01 >= 0.49f;
+        bool mouseUpper = false;
+        Vector2 virtualMouseOriginalRatio = new Vector2(virtualMouseOriginal.x / monitorWidth, virtualMouseOriginal.y / monitorHeight);
+        if (waitingTransitionState && !animator.IsInTransition(0))
+        {
+            waitingTransitionState = false;
+            //InitArms();
+        }
+        FPSallow0 = false;
+        if (FPSallow0)
+        {
+            prevState = FPSallow ? "Idle" : "not";
+            FPSallow = animator.GetCurrentAnimatorStateInfo(0).IsName("Idle");
+        }
+        if (prevState == "Idle" && !FPSallow)
+        {
+            waitingTransitionState = true;
+        }
+        //animator.SetLayerWeight(2, FPSallow ? 1 : 0);
+        virtualMouseModifiedClamp = Input.mousePosition;
+        if (GetComponent<AvatarHideHandler>().snappedSide == AvatarHideHandler.Side.Left)
+        {
+            mouseUpper = virtualMouseOriginalRatio.x >= 0.49f;
+        }
+        else if (GetComponent<AvatarHideHandler>().snappedSide == AvatarHideHandler.Side.Right)
+        {
+            mouseUpper = virtualMouseOriginalRatio.x <= 0.51f;
+        }
+        else if (FPSallow)
+        {
+            FPSmode = virtualMouseOriginalRatio.y > 0.49f;
+            if (FPSmode)
+            {
+                Debug.Log("FPSMODE");
+            }
+            //FPSmode = virtualMouseOriginalRatio.y > FPSpercentageMin && virtualMouseOriginalRatio.y < FPSpercentageMax && virtualMouseOriginalRatio.x > FPSpercentageMin && virtualMouseOriginalRatio.x < FPSpercentageMax;
+            ModifyVirtualMouse();
+            if (FPSmode != prevFPSMode)
+            {
+                //turnViaRight = isTurning ? turnViaRight : mouseX01 >= 0.5f;
+                turnViaRight = virtualMouseOriginalRatio.x >= 0.5f;
+            }
+            prevFPSMode = FPSmode;
+            mouseUpper = FPSmode;
+            if (!FPSmode)
+            {
+                mouseUpper = virtualMouseOriginalRatio.y > 0.49f;
+            }
+            //    FPSmode = mouseY01 > 0.475f && mouseY01 < 0.525f && mouseX01 > 0.475f && mouseX01 < 0.535f;
+            //    mouseUpper = FPSmode;
+            //}
+            //else if (!FPSmode)
+            //{
+            //    mouseUpper = mouseY01 > 0.49f;
+        }
+        else
+        {
+            mouseUpper = virtualMouseOriginalRatio.y > 0.49f;
+        }
+            //Vector2 mouse = Input.mousePosition;          // screen pixels, origin bottom-left
+            //Rect camRect = mainCam.pixelRect;
+            //float viewportY = (mouse.y - camRect.y) / camRect.height;
 
-        ////// optional clamp and debug
-        ////viewportY = Mathf.Clamp01(viewportY);
-        //[DllImport("user32.dll")]
-        //static extern IntPtr GetActiveWindow();
-        //float mouseYinWindow = mouse.y - GetActiveWindow().m;
+            ////// optional clamp and debug
+            ////viewportY = Mathf.Clamp01(viewportY);
+            //[DllImport("user32.dll")]
+            //static extern IntPtr GetActiveWindow();
+            //float mouseYinWindow = mouse.y - GetActiveWindow().m;
 
-        //// Now compute upper/lower half
-        //bool mouseUpper = mouseYinWindow > (win.height * 0.5f);
-        //bool mouseUpper = viewportY > yAimTreshold;
-        bool isArmed = animator.GetBool("isArmed");
+            //// Now compute upper/lower half
+            //bool mouseUpper = mouseYinWindow > (win.height * 0.5f);
+            //bool mouseUpper = viewportY > yAimTreshold;
+            bool isArmed = animator.GetBool("isArmed");
 
         if (mouseUpper && !isArmed)
         {
+            //if (GetComponent<AvatarHideHandler>().snappedSide != AvatarHideHandler.Side.None)
+            //{
+            //    animator.SetLayerWeight(1, 0);
+            //}
+            //else
+            //{
+            //    animator.SetLayerWeight(1, 0);
+            //}
+            //animator.SetLayerWeight(1, GetComponent<AvatarHideHandler>().snappedSide == AvatarHideHandler.Side.None ? 1 : 0);
+            //Debug.Log("Be Armed");
             animator.SetBool("isArmed", true);
             gun.SetActive(true);
         }
@@ -363,12 +532,88 @@ public class AvatarMouseTracking : MonoBehaviour
             animator.SetBool("isArmed", false);
             gun.SetActive(false);
         }
-        if (GlobalMouse.LeftMouseUp() && isArmed)
+        DoBodyYaw();
+        //if (FPSmode != prevFPSMode || turnViaRight != prevFPSMode)
+        //{
+        //    prevFPSMode = FPSmode;
+        //    prevturnViaRight = turnViaRight;
+        //    BeginBodyTurn();            
+        //}
+        //DoBodyYaw1();
+        //if (bodyFire)
+        //{
+        //    animator.SetTrigger("Fire");
+        //    bodyFire = false;
+        //}
+
+        //if (animator.GetCurrentAnimatorStateInfo(0).IsName("Idle"))
+        //{
+        //    Debug.Log("is idle");
+        //}
+        //else
+        //{
+        //    Debug.Log("not idle");
+        //}
+        //animator.GetCurrentAnimatorStateInfo()
+        //if (GlobalMouse.BothMouseDownOnce())
+        //if (Input.mouseScrollDelta.y != 0)
+        ////if (GlobalMouse.BothMouseDownOnce() && false)
+        ////if (virtualMouseOriginal.y + 100 >= monitor.bottom - monitor.top)
+        //{
+        //    //WinMessageBox.Show($"monitor left{monitor.left}right{monitor.right}top{monitor.top}bottom{monitor.bottom}{Environment.NewLine}winRect left{winRect.left}right{winRect.right}top{winRect.top}bottom{winRect.bottom}{Environment.NewLine}virtualMouseOriginal {virtualMouseOriginal.x} {virtualMouseOriginal.y}{Environment.NewLine}virtualMouseModified {virtualMouseModified.x} {virtualMouseModified.y}{Environment.NewLine}virtualMouseOriginalRatio {virtualMouseOriginalRatio.x} {virtualMouseOriginalRatio.y}{Environment.NewLine}Input.mousePosition {Input.mousePosition.x} {Input.mousePosition.y}{Environment.NewLine}virtualMouseModifiedClamp {virtualMouseModifiedClamp.x} {virtualMouseModifiedClamp.y}");
+        //    //////////////////////////////////////
+        //    //if (currentGun == gunPrefab)
+        //    //{
+        //    //    LoadGun(gunPrefab2);
+        //    //}
+        //    //else
+        //    //{
+        //    //    LoadGun(gunPrefab);
+        //    //}
+        //}
+
+        if (GlobalMouse.IsKeyDown(0x31))
         {
-            animator.SetTrigger("Fire");
+            LoadGun(0);
         }
-        //
-        var info = animator.GetCurrentAnimatorStateInfo(0);
+        else if (GlobalMouse.IsKeyDown(0x32))
+        {
+            LoadGun(1);
+        }
+
+        if (isArmed)
+        {
+            if (GlobalMouse.LeftMouseUp())
+            {
+                gun.GetComponentInChildren<Animator>().SetTrigger("Fire");
+                //animator.SetTrigger("Fire");
+            }
+            else if (gun.GetComponentInChildren<Animator>().HasParameter("Firing", AnimatorControllerParameterType.Bool))
+            {
+                gun.GetComponentInChildren<Animator>().SetBool("Firing", GlobalMouse.LeftMouseDown());
+            }
+        }
+
+        ////if (GlobalMouse.LeftMouseUp() && isArmed)
+        //if (GlobalMouse.LeftMouseDown() && isArmed)
+        //{
+        //    if (gun.GetComponentInChildren<Animator>().HasParameter("Firing", AnimatorControllerParameterType.Bool))
+        //    {
+        //        gun.GetComponentInChildren<Animator>().SetBool("Firing", true);
+        //    }
+        //    else
+        //    {
+        //        gun.GetComponentInChildren<Animator>().SetTrigger("Fire");
+        //    }
+        //    animator.SetTrigger("Fire");
+        //    //bodyFire = true;
+        //}
+        //else if (gun.GetComponentInChildren<Animator>().HasParameter("Firing", AnimatorControllerParameterType.Bool))
+        //{
+        //    gun.GetComponentInChildren<Animator>().SetBool("Firing", false);
+        //}
+            //
+            var info = animator.GetCurrentAnimatorStateInfo(0);
         var next = animator.GetNextAnimatorStateInfo(0);
         bool trans = animator.IsInTransition(0);
         if (trans) nextStateHash = next.shortNameHash;
@@ -380,6 +625,7 @@ public class AvatarMouseTracking : MonoBehaviour
         if (isArmed)
         {
             DoArms0();
+            //DoArms05();
         }
     }
 
@@ -401,7 +647,9 @@ public class AvatarMouseTracking : MonoBehaviour
     void DoHead()
     {
         if (!headBone || !headDriver) return;
-        var mouse = Input.mousePosition;
+        //var mouse = Input.mousePosition;
+        //var mouse = virtualMouseModified;
+        var mouse = virtualMouseModifiedClamp;
         var world = mainCam.ScreenToWorldPoint(new Vector3(mouse.x, mouse.y, mainCam.nearClipPlane));
         var dir = (world - headDriver.position).normalized;
         var localDir = headDriver.parent.InverseTransformDirection(dir);
@@ -412,6 +660,128 @@ public class AvatarMouseTracking : MonoBehaviour
         var delta = headDriver.localRotation * Quaternion.Inverse(headInitRot);
         headBone.localRotation = Quaternion.Slerp(baseRot, delta * baseRot, headBlend);
     }
+    void DoBodyYaw0DirecetionedRotate()
+    {
+        /////////////////////////////////////////////////////////
+        ///WORKS FOR MOST PART
+        float targetYaw = FPSmode ? 0f : 180f;
+        float delta = Mathf.DeltaAngle(currentYaw, targetYaw);
+
+        // Force sign based on turnViaRight
+        float forcedDelta = Mathf.Abs(delta) * (turnViaRight ? -1f : 1f) * (FPSmode ? 1f : -1f);
+
+        // New target based on forced delta
+        float biasedTarget = currentYaw + forcedDelta;
+        /////////////////////////////////////////////////////////
+        //float targetYaw = FPSmode ? 0f : 180f;
+        //float delta = Mathf.DeltaAngle(currentYaw, targetYaw);
+
+        //// Force direction based on turnViaRight
+        //float forcedDelta = Mathf.Abs(delta) * (turnViaRight ? 1f : -1f);
+        //float biasedTarget = currentYaw + forcedDelta;
+        if (currentYaw != targetYaw)
+        {
+            isTurning = true;
+            //Debug.Log(currentYaw.ToString() + " " + targetYaw.ToString() + " " + forcedDelta.ToString() + " " + biasedTarget.ToString());
+            Debug.Log(turnViaRight.ToString() + " " + currentYaw.ToString() + " " + targetYaw.ToString() + " " + forcedDelta.ToString() + " " + biasedTarget.ToString());
+        }
+        currentYaw = Mathf.SmoothDampAngle(
+            currentYaw,
+            biasedTarget,
+            ref yawVelocity,
+            0.15f // turn duration
+        );
+        //if (Mathf.Abs(Mathf.DeltaAngle(currentYaw, turnTargetYaw)) < 0.1f)
+        //if (Mathf.Abs(Mathf.DeltaAngle(currentYaw, biasedTarget)) < 0.1f)
+        if (Mathf.Abs(Mathf.DeltaAngle(currentYaw % 180, 0)) < 0.1f || Mathf.Abs(Mathf.DeltaAngle(currentYaw % 180, 180)) < 0.1f)
+        {
+            //currentYaw = turnTargetYaw;
+            currentYaw = biasedTarget;
+            yawVelocity = 0f;
+            isTurning = false;
+        }
+        //currentYaw = Mathf.Clamp(currentYaw, 0, 180);
+        transform.rotation = Quaternion.Euler(0f, currentYaw, 0f);
+
+    }
+    void DoBodyYaw()
+    {
+        /////////////////////////////////////////////////////////
+        ///WORKS FOR MOST PART
+        float targetYaw = FPSmode ? 0f : 180f;
+        float delta = Mathf.DeltaAngle(currentYaw, targetYaw);
+
+        // Force sign based on turnViaRight
+        float forcedDelta = Mathf.Abs(delta) * (turnViaRight ? -1f : 1f) * (FPSmode ? 1f : -1f);
+
+        // New target based on forced delta
+        float biasedTarget = currentYaw + forcedDelta;
+        /////////////////////////////////////////////////////////
+        //if (currentYaw != targetYaw)
+        //{
+        //    isTurning = true;
+        //    Debug.Log(turnViaRight.ToString() + " " + currentYaw.ToString() + " " + targetYaw.ToString() + " " + forcedDelta.ToString() + " " + biasedTarget.ToString());
+        //}
+        currentYaw = Mathf.SmoothDampAngle(
+            currentYaw,
+            biasedTarget,
+            ref yawVelocity,
+            0.15f // turn duration
+        );
+        currentYaw = Mathf.Repeat(currentYaw + 180f, 360f) - 180f;
+
+        //currentYaw = Mathf.Clamp(currentYaw, 0, 180);
+        transform.rotation = Quaternion.Euler(0f, currentYaw, 0f);
+
+    }
+
+    void DoBodyYaw1()
+    {
+        if (!isTurning)
+            return;
+
+        currentYaw = Mathf.SmoothDampAngle(
+            currentYaw,
+            turnTargetYaw,
+            ref yawVelocity,
+            turnSmoothTime
+        );
+
+        transform.rotation = Quaternion.Euler(0f, currentYaw, 0f);
+
+        if (Mathf.Abs(Mathf.DeltaAngle(currentYaw, turnTargetYaw)) < 0.1f)
+        {
+            currentYaw = turnTargetYaw;
+            yawVelocity = 0f;
+            isTurning = false;
+        }
+    }
+    void BeginBodyTurn()
+    {
+        float baseTarget = FPSmode ? 0f : 180f;
+
+        currentYaw = Mathf.Repeat(currentYaw, 360f);
+
+        float delta = Mathf.DeltaAngle(currentYaw, baseTarget);
+        float abs = Mathf.Abs(delta);
+
+        float signedDelta = turnViaRight ? -abs : abs;
+
+        // Ensure we're actually moving toward the target
+        if (Mathf.DeltaAngle(currentYaw + signedDelta, baseTarget) != 0f &&
+            Mathf.Sign(Mathf.DeltaAngle(currentYaw + signedDelta, baseTarget)) ==
+            Mathf.Sign(delta))
+        {
+            signedDelta = -signedDelta;
+        }
+
+        turnTargetYaw = currentYaw + signedDelta;
+
+        yawVelocity = 0f;
+        isTurning = true;
+    }
+
+
 
     void DoSpine()
     {
@@ -419,6 +789,9 @@ public class AvatarMouseTracking : MonoBehaviour
         float targetW = IsAllowed("Spine") ? 1f : 0f;
         spineTrackingWeight = Mathf.MoveTowards(spineTrackingWeight, targetW, Time.deltaTime * spineFadeSpeed);
         float normY = Mathf.Clamp01(Input.mousePosition.x / Screen.width);
+        normY = FPSmode ? 1 - normY : normY;
+        //float normY = Mathf.Clamp01(virtualMouseModified.x / Screen.width);
+        //normY = FPSmode ? 0.5f : normY;
         float targetY = Mathf.Lerp(spineMinRotation, spineMaxRotation, normY);
         spineDriver.localRotation = Quaternion.Slerp(spineDriver.localRotation, Quaternion.Euler(0f, -targetY, 0f), Time.deltaTime * spineSmoothness);
         var baseRot = spineBone.localRotation;
@@ -434,13 +807,13 @@ public class AvatarMouseTracking : MonoBehaviour
     void DoArms0()
     {
         float aimDistance = 10f;
-        float armYawLimit = 1f;
-        float armPitchLimit = 10f;
+        float armPitchLimit = 30f;
+
         if (!upperArmR || !upperArmRDriver) return;
-        var mouse = Input.mousePosition;
+        var mouse = virtualMouseModifiedClamp;
         Vector3 dirR = (mainCam.ScreenToWorldPoint(new Vector3(mouse.x, mouse.y, aimDistance)) - upperArmR.position).normalized;
         Vector3 localDirR = upperArmR.parent.InverseTransformDirection(dirR);
-        float yawR = Mathf.Clamp(Mathf.Atan2(localDirR.x, localDirR.z) * Mathf.Rad2Deg, -armYawLimit, armPitchLimit);
+        float yawR = yawROffset;
         float pitchR = Mathf.Clamp(-Mathf.Asin(localDirR.y) * Mathf.Rad2Deg, -armPitchLimit, armPitchLimit);
         Quaternion targetRotR = Quaternion.Euler(pitchR, yawR, 0);
         upperArmRDriver.localRotation = Quaternion.Slerp(upperArmRDriver.localRotation, targetRotR, Time.deltaTime * armSmoothness);
@@ -448,63 +821,58 @@ public class AvatarMouseTracking : MonoBehaviour
         upperArmR.localRotation = Quaternion.Slerp(upperArmR.localRotation, deltaR * upperArmR.localRotation, armBlend);
 
 
-        //Vector3 dirL = (mainCam.ScreenToWorldPoint(new Vector3(mouse.x, mouse.y, aimDistance)) - upperArmL.position).normalized;
-        //Vector3 localDirL = upperArmL.parent.InverseTransformDirection(dirL);
-        //float yawL = Mathf.Clamp(Mathf.Atan2(localDirL.x, localDirL.z) * Mathf.Rad2Deg, -armYawLimit, armPitchLimit);
-        //float pitchL = Mathf.Clamp(-Mathf.Asin(localDirL.y) * Mathf.Rad2Deg, -armPitchLimit, armPitchLimit);
-        //Quaternion targetRotL = Quaternion.Euler(pitchR, yawR, 0); //STILL USING THE RIGHT VERSION BECOZ GOOD ENOUGH
-        //upperArmLDriver.localRotation = Quaternion.Slerp(upperArmLDriver.localRotation, targetRotL, Time.deltaTime * armSmoothness);
-        //Quaternion deltaL = upperArmLDriver.localRotation * Quaternion.Inverse(upperArmLInitRot);
-        //upperArmL.localRotation = Quaternion.Slerp(upperArmL.localRotation, deltaL * upperArmL.localRotation, armBlend);
+        Vector3 dirL = (mainCam.ScreenToWorldPoint(new Vector3(mouse.x, mouse.y, aimDistance)) - upperArmL.position).normalized;
+        Vector3 localDirL = upperArmL.parent.InverseTransformDirection(dirL);
+        float yawL = yawLOffset;
+        float pitchL = pitchR;
+        Quaternion targetRotL = Quaternion.Euler(pitchL, yawL, 0);
+        upperArmLDriver.localRotation = Quaternion.Slerp(upperArmLDriver.localRotation, targetRotL, Time.deltaTime * armSmoothness);
+        Quaternion deltaL = upperArmLDriver.localRotation * Quaternion.Inverse(upperArmLInitRot);
+        upperArmL.localRotation = Quaternion.Slerp(upperArmL.localRotation, deltaL * upperArmL.localRotation, armBlend);
     }
     void DoArms05()
     {
         float aimDistance = 10f;
-        float armYawLimit = 1f;
-        float armPitchLimit = 10f;
-        //
-        float autoPickTolerance = 5f;
-        //
+        float armYawLimit = 60f;   // ±60° horizontal movement
+        float armPitchLimit = 45f; // ±45° vertical movement
         if (!upperArmR || !upperArmRDriver) return;
-        var mouse = Input.mousePosition;
+        //var mouse = Input.mousePosition;
+        //var mouse = virtualMouseModified;
+        var mouse = virtualMouseModifiedClamp;
+        //
+        // RIGHT ARM
         Vector3 dirR = (mainCam.ScreenToWorldPoint(new Vector3(mouse.x, mouse.y, aimDistance)) - upperArmR.position).normalized;
-        Vector3 dirL = (mainCam.ScreenToWorldPoint(new Vector3(mouse.x, mouse.y, aimDistance)) - upperArmL.position).normalized;
         Vector3 localDirR = upperArmR.parent.InverseTransformDirection(dirR);
-        Vector3 localDirL = upperArmL.parent.InverseTransformDirection(dirL);
-        float yawR = Mathf.Clamp(Mathf.Atan2(localDirR.x, localDirR.z) * Mathf.Rad2Deg, -armYawLimit, armPitchLimit);
+        float yawR = Mathf.Atan2(localDirR.x, localDirR.z) * Mathf.Rad2Deg;
+
+        // Handle angle wrapping for smooth transitions
+        float currentYawR = upperArmRDriver.localRotation.eulerAngles.y;
+        if (currentYawR > 180f) currentYawR -= 360f; // Convert to [-180, 180]
+        yawR = Mathf.Clamp(Mathf.MoveTowardsAngle(currentYawR, yawR, 180f), -armYawLimit, armYawLimit);
+
         float pitchR = Mathf.Clamp(-Mathf.Asin(localDirR.y) * Mathf.Rad2Deg, -armPitchLimit, armPitchLimit);
-        float yawL = Mathf.Clamp(Mathf.Atan2(localDirL.x, localDirL.z) * Mathf.Rad2Deg, -armYawLimit, armPitchLimit);
-        float pitchL = Mathf.Clamp(-Mathf.Asin(localDirL.y) * Mathf.Rad2Deg, -armPitchLimit, armPitchLimit);
         Quaternion targetRotR = Quaternion.Euler(pitchR, yawR, 0);
-        Quaternion targetRotL = Quaternion.Euler(pitchR, yawR, 0);
         upperArmRDriver.localRotation = Quaternion.Slerp(upperArmRDriver.localRotation, targetRotR, Time.deltaTime * armSmoothness);
-        upperArmLDriver.localRotation = Quaternion.Slerp(upperArmLDriver.localRotation, targetRotL, Time.deltaTime * armSmoothness);
         Quaternion deltaR = upperArmRDriver.localRotation * Quaternion.Inverse(upperArmRInitRot);
-        // Candidate A: bind -> calibrate -> delta
-        Quaternion candA = upperArmRInitRot * calibrateOffsetR * deltaR;
+        upperArmR.localRotation = Quaternion.Slerp(upperArmR.localRotation, deltaR * upperArmR.localRotation, armBlend);
 
-        // Candidate B: bind -> delta -> calibrate (some rigs need calibrate after)
-        Quaternion candB = upperArmRInitRot * deltaR * calibrateOffsetR;
+        // LEFT ARM
+        Vector3 dirL = (mainCam.ScreenToWorldPoint(new Vector3(mouse.x, mouse.y, aimDistance)) - upperArmL.position).normalized;
+        Vector3 localDirL = upperArmL.parent.InverseTransformDirection(dirL);
 
-        // Choose the candidate that produces smaller twist from the bind pose
-        float diffA = Quaternion.Angle(upperArmRInitRot, candA);
-        float diffB = Quaternion.Angle(upperArmRInitRot, candB);
-        Quaternion chosenTarget;
-        if (Mathf.Abs(diffA - diffB) < autoPickTolerance)
-        {
-            // they're similar, prefer the one that changes less
-            chosenTarget = (diffA < diffB) ? candA : candB;
-        }
-        else
-        {
-            chosenTarget = (diffA < diffB) ? candA : candB;
-        }
-        upperArmR.localRotation = Quaternion.Slerp(upperArmR.localRotation, chosenTarget, armBlend);
-        //upperArmR.localRotation = Quaternion.Slerp(upperArmR.localRotation, deltaR * upperArmR.localRotation, armBlend) * calibrateOffsetR;
-        upperArmR.localRotation = Quaternion.Slerp(upperArmR.localRotation, deltaR * calibrateOffsetR, armBlend);
+        // For left arm, use -x to mirror the movement
+        float yawL = Mathf.Atan2(-localDirL.x, localDirL.z) * Mathf.Rad2Deg;
+
+        // Handle angle wrapping for smooth transitions
+        float currentYawL = upperArmLDriver.localRotation.eulerAngles.y;
+        if (currentYawL > 180f) currentYawL -= 360f; // Convert to [-180, 180]
+        yawL = Mathf.Clamp(Mathf.MoveTowardsAngle(currentYawL, yawL, 180f), -armYawLimit, armYawLimit);
+
+        float pitchL = Mathf.Clamp(-Mathf.Asin(localDirL.y) * Mathf.Rad2Deg, -armPitchLimit, armPitchLimit);
+        Quaternion targetRotL = Quaternion.Euler(pitchL, yawL, 0);
+        upperArmLDriver.localRotation = Quaternion.Slerp(upperArmLDriver.localRotation, targetRotL, Time.deltaTime * armSmoothness);
         Quaternion deltaL = upperArmLDriver.localRotation * Quaternion.Inverse(upperArmLInitRot);
         upperArmL.localRotation = Quaternion.Slerp(upperArmL.localRotation, deltaL * upperArmL.localRotation, armBlend);
-        //upperArmL.localRotation = Quaternion.Slerp(upperArmL.localRotation, deltaL * upperArmL.localRotation, armBlend) * calibrateOffset;
     }
     void DoArms1()
     {
@@ -537,7 +905,8 @@ public class AvatarMouseTracking : MonoBehaviour
     }
     void DoEye()
     {
-        var mouse = Input.mousePosition;
+        //var mouse = Input.mousePosition;
+        var mouse = virtualMouseModified;
         var world = mainCam.ScreenToWorldPoint(new Vector3(mouse.x, mouse.y, mainCam.nearClipPlane));
         if (vrm10 && vrmLookAtTarget)
         {
